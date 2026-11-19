@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vpharm — Bảng lead</title>
+  <style>
+    :root {
+      --bg: #f3f6f4;
+      --ink: #14201a;
+      --muted: #5b6b62;
+      --line: #d5ddd7;
+      --accent: #0f6b4c;
+      --accent-soft: #e4f3ec;
+      --warn: #8a4b12;
+      --card: #ffffff;
+      --font: "Be Vietnam Pro", "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 500px at 10% -10%, #dceee4 0%, transparent 55%),
+        linear-gradient(180deg, #eef3f0, var(--bg));
+      min-height: 100vh;
+    }
+    header {
+      padding: 1.25rem 1.5rem 0.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+    }
+    h1 span { color: var(--accent); }
+    .meta { color: var(--muted); font-size: 0.92rem; }
+    main { padding: 0 1.5rem 2.5rem; max-width: 1100px; margin: 0 auto; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+      margin: 1rem 0 1.25rem;
+    }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 0.85rem 1rem;
+    }
+    .stat strong { display: block; font-size: 1.25rem; }
+    .stat span { color: var(--muted); font-size: 0.85rem; }
+    form.filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: end;
+      margin-bottom: 1rem;
+    }
+    label { display: grid; gap: 0.25rem; font-size: 0.85rem; color: var(--muted); }
+    input, select, textarea, button {
+      font: inherit;
+      padding: 0.45rem 0.6rem;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+    }
+    button, .btn {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn.secondary { background: #fff; color: var(--accent); }
+    .lead {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 1rem;
+      margin-bottom: 0.85rem;
+    }
+    .lead-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .score {
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 0.15rem 0.45rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .text { white-space: pre-wrap; line-height: 1.45; margin: 0.5rem 0; }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.35rem 0; }
+    .chip {
+      background: #eef1ef;
+      color: var(--muted);
+      font-size: 0.78rem;
+      padding: 0.15rem 0.4rem;
+    }
+    .draft {
+      background: #faf7f1;
+      border-left: 3px solid var(--warn);
+      padding: 0.6rem 0.75rem;
+      margin: 0.6rem 0;
+      white-space: pre-wrap;
+      font-size: 0.95rem;
+    }
+    .update {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.5rem;
+      align-items: end;
+      margin-top: 0.75rem;
+    }
+    .empty { color: var(--muted); padding: 2rem 0; }
+    a { color: var(--accent); }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header>
+    <div>
+      <h1><span>Vpharm</span> — Bảng theo dõi lead</h1>
+      <div class="meta">Chỉ giám sát · không tự bình luận / đăng / nhắn tin</div>
+    </div>
+    <div>
+      <a class="btn secondary" href="{{ url_for('export_csv') }}">Xuất CSV</a>
+    </div>
+  </header>
+  <main>
+    <section class="stats" aria-label="Thống kê">
+      {% for row in stats.by_status %}
+      <div class="stat">
+        <strong>{{ row.n }}</strong>
+        <span>Trạng thái: {{ row.status }} · DT {{ row.rev }}</span>
+      </div>
+      {% else %}
+      <div class="stat"><strong>0</strong><span>Chưa có lead</span></div>
+      {% endfor %}
+    </section>
+
+    <form class="filters" method="get" action="{{ url_for('index') }}">
+      <label>Trạng thái
+        <select name="status">
+          <option value="" {% if not current_status %}selected{% endif %}>Tất cả</option>
+          {% for s in ['new','contacted','won','lost','spam'] %}
+          <option value="{{ s }}" {% if current_status == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Điểm tối thiểu
+        <input type="number" name="min_score" value="{{ request.args.get('min_score', 0) }}" min="0">
+      </label>
+      <button type="submit">Lọc</button>
+    </form>
+
+    {% if leads %}
+      {% for lead in leads %}
+      <article class="lead">
+        <div class="lead-top">
+          <div>
+            <span class="score">{{ lead.score or 0 }} điểm</span>
+            <strong>{{ lead.author or 'Ẩn danh' }}</strong>
+            <span class="meta">· {{ lead.status }}</span>
+          </div>
+          {% if lead.url %}
+          <a href="{{ lead.url }}" target="_blank" rel="noopener">Mở bài viết</a>
+          {% endif %}
+        </div>
+        <p class="text">{{ lead.text }}</p>
+        {% if lead.matched_kw %}
+        <div class="chips">
+          {% for kw in lead.matched_kw %}
+          <span class="chip">{{ kw }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if lead.score_reasons %}
+        <div class="chips">
+          {% for reason in lead.score_reasons %}
+          <span class="chip">{{ reason }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if lead.draft %}
+        <div class="draft"><strong>Nháp trả lời</strong><br>{{ lead.draft }}</div>
+        {% endif %}
+        <form class="update" method="post" action="{{ url_for('update', post_id=lead.post_id) }}">
+          <label>Trạng thái
+            <select name="status">
+              {% for s in ['new','contacted','won','lost','spam'] %}
+              <option value="{{ s }}" {% if lead.status == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Doanh thu
+            <input type="number" name="revenue" value="{{ lead.revenue or 0 }}">
+          </label>
+          <label>Ghi chú
+            <input type="text" name="notes" value="{{ lead.notes or '' }}">
+          </label>
+          <button type="submit">Cập nhật</button>
+        </form>
+      </article>
+      {% endfor %}
+    {% else %}
+      <p class="empty">Chưa có lead phù hợp bộ lọc.</p>
+    {% endif %}
+  </main>
+  <script>
+    (function () {
+      let since = {{ now }};
+      async function poll() {
+        try {
+          const res = await fetch('/api/leads/since/' + since, { credentials: 'same-origin' });
+          if (!res.ok) return;
+          const data = await res.json();
+          since = data.now || since;
+          const leads = data.leads || [];
+          if (!leads.length) return;
+          if (Notification.permission === 'granted') {
+            leads.slice(0, 3).forEach((lead) => {
+              new Notification('Lead mới · ' + (lead.score || 0) + ' điểm', {
+                body: ((lead.author || '') + ': ' + (lead.text || '')).slice(0, 140),
+              });
+            });
+          }
+        } catch (e) {}
+      }
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+      setInterval(poll, 30000);
+    })();
+  </script>
+</body>
+</html>

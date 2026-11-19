@@ -32,4 +32,4 @@ Project constraints for Cursor live in [`.cursor/rules/facebook-group-lead-monit
 
 ## Status
 
-Scaffold + working `store.py` and monitor-only `fb.py`. Scoring, drafts, email, orchestrator, and dashboard are not implemented yet.
+Core pipeline implemented: `store`, `fb`, `score`, `draft`, `notify_email`, `main`, and Vietnamese Flask dashboard (`dashboard/app.py`).
