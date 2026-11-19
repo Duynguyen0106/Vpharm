@@ -9,12 +9,15 @@ from typing import Any
 
 import yaml
 
-_CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
+_ROOT = Path(__file__).resolve().parent
 
 
 def _load_config() -> dict[str, Any]:
-    """Load project config.yaml."""
-    with _CONFIG_PATH.open(encoding="utf-8") as f:
+    """Load config.local.yaml when present, else config.yaml."""
+    path = _ROOT / "config.local.yaml"
+    if not path.exists():
+        path = _ROOT / "config.yaml"
+    with path.open(encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 

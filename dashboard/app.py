@@ -7,6 +7,7 @@ import io
 import json
 import sys
 import time
+from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable
@@ -27,14 +28,15 @@ if str(ROOT) not in sys.path:
 
 import store  # noqa: E402
 
-_CONFIG_PATH = ROOT / "config.yaml"
-
 app = Flask(__name__)
 
 
 def _load_config() -> dict[str, Any]:
-    """Load project config.yaml."""
-    with _CONFIG_PATH.open(encoding="utf-8") as f:
+    """Load config.local.yaml when present, else config.yaml."""
+    path = ROOT / "config.local.yaml"
+    if not path.exists():
+        path = ROOT / "config.yaml"
+    with path.open(encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 
@@ -49,6 +51,15 @@ def _parse_json_list(value: Any) -> list[Any]:
         return parsed if isinstance(parsed, list) else []
     except (TypeError, json.JSONDecodeError):
         return []
+
+
+def _format_seen_at(ts: Any) -> str:
+    """Format unix seconds as a local-looking YYYY-MM-DD HH:MM string."""
+    try:
+        value = int(ts)
+    except (TypeError, ValueError):
+        return "—"
+    return datetime.fromtimestamp(value, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 
 def requires_auth(view: Callable[..., Any]) -> Callable[..., Any]:
@@ -94,6 +105,7 @@ def index() -> str:
     for lead in leads:
         lead["matched_kw"] = _parse_json_list(lead.get("matched_kw"))
         lead["score_reasons"] = _parse_json_list(lead.get("score_reasons"))
+        lead["seen_at_human"] = _format_seen_at(lead.get("seen_at"))
 
     return render_template(
         "index.html",

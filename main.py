@@ -23,15 +23,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger("main")
 
-_CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
-
-pending: list[dict[str, Any]] = []
 last_flush: float = time.time()
 
 
 def _load_config() -> dict[str, Any]:
-    """Load project config.yaml."""
-    with _CONFIG_PATH.open(encoding="utf-8") as f:
+    """Load config.local.yaml when present, else config.yaml."""
+    root = Path(__file__).resolve().parent
+    path = root / "config.local.yaml"
+    if not path.exists():
+        path = root / "config.yaml"
+    with path.open(encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 
@@ -69,20 +70,30 @@ async def _ensure_logged_in(page: Page) -> None:
     await asyncio.to_thread(input)
 
 
+async def _maybe_flush_digest(digest_seconds: int) -> None:
+    """Send persisted pending digests when the interval has elapsed."""
+    global last_flush
+    if time.time() - last_flush <= digest_seconds:
+        return
+    pending = store.list_digest_pending()
+    if not pending:
+        last_flush = time.time()
+        return
+    if notify_email.send_digest(pending):
+        store.mark_notified([str(p["post_id"]) for p in pending])
+        last_flush = time.time()
+        logger.info("Digest sent for %s leads", len(pending))
+    else:
+        logger.warning(
+            "Digest send failed; keeping %s pending leads in SQLite",
+            len(pending),
+        )
+
+
 async def run() -> None:
     """Run the monitor loop until interrupted."""
-    global last_flush
-
     cfg = _load_config()
     store.init()
-
-    poll_seconds = int(cfg.get("poll_interval_seconds") or 120)
-    scrolls = int(cfg.get("scroll_count") or 3)
-    min_score = int(cfg.get("min_score_to_notify") or 3)
-    keywords = [str(k) for k in (cfg.get("keywords") or [])]
-    groups = cfg.get("groups") or []
-    digest_minutes = int((cfg.get("email") or {}).get("digest_interval_minutes") or 60)
-    digest_seconds = digest_minutes * 60
 
     async with async_playwright() as pw:
         context, page = await fb.start_browser(pw)
@@ -108,34 +119,28 @@ async def run() -> None:
                         posts = await fb.scan_group(page, group_url, scrolls)
                         for post in posts:
                             post_id = str(post.get("id") or post.get("post_id") or "")
-                            if not post_id or not store.is_new(post_id):
+                            if not post_id:
                                 continue
+                            if store.is_seen(post_id):
+                                continue
+                            # Mark every scanned id so non-leads are not rescored.
+                            store.mark_seen(post_id)
+
                             text = post.get("text") or ""
                             hits = [
-                                kw
-                                for kw in keywords
-                                if kw.lower() in text.lower()
+                                kw for kw in keywords if kw.lower() in text.lower()
                             ]
-                            # Skip non-matches entirely so score-0 noise never
-                            # lands in SQLite or the live-notification feed.
                             if not hits:
                                 continue
                             score_val, reasons = score.score(text, hits)
                             if score_val < min_score:
                                 continue
+                            if not store.is_new(post_id):
+                                continue
                             draft_text = draft.draft_reply(
                                 text, post.get("author") or "Unknown"
                             )
                             store.insert(post, hits, score_val, reasons, draft_text)
-                            pending.append(
-                                {
-                                    "score": score_val,
-                                    "author": post.get("author") or "Unknown",
-                                    "text": text,
-                                    "draft": draft_text,
-                                    "url": post.get("url") or "",
-                                }
-                            )
                             logger.info(
                                 "Lead %s score=%s author=%s",
                                 post_id,
@@ -146,16 +151,7 @@ async def run() -> None:
                         logger.exception("Error scanning group %s", group_url)
                         continue
 
-                if time.time() - last_flush > digest_seconds and pending:
-                    if notify_email.send_digest(pending):
-                        pending.clear()
-                        last_flush = time.time()
-                    else:
-                        logger.warning(
-                            "Digest send failed; keeping %s pending leads",
-                            len(pending),
-                        )
-
+                await _maybe_flush_digest(digest_seconds)
                 await asyncio.sleep(poll_seconds)
         finally:
             await context.close()

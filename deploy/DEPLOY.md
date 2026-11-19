@@ -12,12 +12,13 @@ Run the **monitor** (`main.py` + Playwright) and **dashboard** (Flask) 24/7 on o
 
 ```bash
 git clone <your-repo-url> vpharm && cd vpharm
-cp config.yaml config.yaml.bak   # optional
-# Edit config.yaml on the server: company, groups, keywords, intent_keywords,
-# catalog, ai.api_key, email.*, dashboard.password (change from change-me).
+cp config.example.yaml config.yaml
+# Edit groups/keywords/catalog on the server. Prefer secrets in config.local.yaml
+# (gitignored; preferred over config.yaml when present): ai.api_key, email.*,
+# dashboard.password (change from change-me).
 ```
 
-Never commit filled secrets. Prefer editing `config.yaml` only on the VPS.
+Never commit filled secrets.
 
 ```bash
 docker compose build

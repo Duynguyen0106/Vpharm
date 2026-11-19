@@ -39,10 +39,12 @@ Core pipeline implemented: `store`, `fb`, `score`, `draft`, `notify_email`, `mai
 ```bash
 pip install -r requirements.txt
 playwright install chromium
-# Fill config.yaml (groups, keywords, secrets)
+cp config.example.yaml config.yaml
+# Put secrets in config.local.yaml (gitignored) — preferred when present
 python test_e2e.py          # seed sample leads
 python dashboard/app.py     # http://localhost:5000
 python main.py              # monitor loop (needs Facebook login)
+python -m unittest discover -s tests -q
 ```
 
 ## Deploy on a VPS (recommended)

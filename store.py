@@ -18,8 +18,15 @@ def _connect() -> sqlite3.Connection:
     return conn
 
 
+def _ensure_column(conn: sqlite3.Connection, table: str, column: str, decl: str) -> None:
+    """Add a column when missing (SQLite has no IF NOT EXISTS for ADD COLUMN)."""
+    cols = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+    if column not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+
+
 def init() -> None:
-    """Create the leads table and indexes if they do not exist."""
+    """Create leads/seen_posts tables and indexes if they do not exist."""
     with _connect() as conn:
         conn.executescript(
             """
@@ -37,16 +44,47 @@ def init() -> None:
               revenue INTEGER DEFAULT 0,
               notes TEXT,
               seen_at INTEGER,
-              updated_at INTEGER
+              updated_at INTEGER,
+              notified INTEGER DEFAULT 0
             );
             CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
             CREATE INDEX IF NOT EXISTS idx_leads_score ON leads(score DESC);
+            CREATE INDEX IF NOT EXISTS idx_leads_notified ON leads(notified);
+
+            CREATE TABLE IF NOT EXISTS seen_posts (
+              post_id TEXT PRIMARY KEY,
+              seen_at INTEGER
+            );
             """
+        )
+        _ensure_column(conn, "leads", "notified", "INTEGER DEFAULT 0")
+
+
+def is_seen(post_id: str) -> bool:
+    """Return True if post_id was already scanned (lead or non-lead)."""
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM seen_posts WHERE post_id = ?",
+            (post_id,),
+        ).fetchone()
+    return row is not None
+
+
+def mark_seen(post_id: str) -> None:
+    """Record that a post_id was observed in a group scan."""
+    now = int(time.time())
+    with _connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO seen_posts (post_id, seen_at) VALUES (?, ?)
+            ON CONFLICT(post_id) DO UPDATE SET seen_at = excluded.seen_at
+            """,
+            (post_id, now),
         )
 
 
 def is_new(post_id: str) -> bool:
-    """Return True if post_id is not already stored."""
+    """Return True if post_id is not already stored as a lead."""
     with _connect() as conn:
         row = conn.execute(
             "SELECT 1 FROM leads WHERE post_id = ?",
@@ -72,8 +110,8 @@ def insert(
             INSERT INTO leads (
               post_id, group_url, author, text, url,
               matched_kw, score, score_reasons, draft,
-              status, revenue, notes, seen_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', 0, NULL, ?, ?)
+              status, revenue, notes, seen_at, updated_at, notified
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', 0, NULL, ?, ?, 0)
             """,
             (
                 post_id,
@@ -89,6 +127,14 @@ def insert(
                 now,
             ),
         )
+        if post_id:
+            conn.execute(
+                """
+                INSERT INTO seen_posts (post_id, seen_at) VALUES (?, ?)
+                ON CONFLICT(post_id) DO UPDATE SET seen_at = excluded.seen_at
+                """,
+                (str(post_id), now),
+            )
 
 
 def update_status(
@@ -154,6 +200,38 @@ def leads_since(
             (ts, min_score, limit),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def list_digest_pending(limit: int = 50) -> list[dict[str, Any]]:
+    """Return notify-worthy leads not yet included in a successful digest."""
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT post_id, author, score, text, draft, url, seen_at
+            FROM leads
+            WHERE notified = 0
+            ORDER BY score DESC, seen_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def mark_notified(post_ids: list[str]) -> None:
+    """Mark leads as included in a sent digest."""
+    if not post_ids:
+        return
+    now = int(time.time())
+    with _connect() as conn:
+        conn.executemany(
+            """
+            UPDATE leads
+            SET notified = 1, updated_at = ?
+            WHERE post_id = ?
+            """,
+            [(now, pid) for pid in post_ids],
+        )
 
 
 def stats() -> dict[str, list[dict[str, Any]]]:

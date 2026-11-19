@@ -1,0 +1,80 @@
+# Copy to config.yaml (or config.local.yaml for secrets-only overrides).
+# config.local.yaml is gitignored and preferred when present.
+
+company:
+  name: "Vpharm"
+  phone: "0900 000 000"
+  tone: "chuyên nghiệp, thân thiện, nói ngắn gọn"
+
+groups:
+  # - "https://www.facebook.com/groups/your-private-group-id"
+
+keywords:
+  - mua
+  - cần mua
+  - nhập
+  - sỉ
+  - buôn
+  - tư vấn
+  - giá
+  - vitamin
+  - collagen
+  - dầu cá
+  - thực phẩm chức năng
+
+intent_keywords:
+  buy:
+    - mua
+    - cần mua
+    - đặt hàng
+    - giá bao nhiêu
+  consult:
+    - tư vấn
+    - hỏi
+    - nên dùng
+  urgency:
+    - gấp
+    - hôm nay
+    - lấy liền
+    - liên hệ ngay
+  supply:
+    - sỉ
+    - buôn
+    - nhập hàng
+    - wholesale
+    - đại lý
+
+catalog:
+  - name: "Vitamin C 1000mg"
+    tag: ["vitamin c", "vit c"]
+    price_note: "liên hệ báo giá sỉ"
+    usp: "phù hợp phòng khám / nhà thuốc"
+  - name: "Dầu cá Omega-3"
+    tag: ["dầu cá", "omega"]
+    price_note: "liên hệ báo giá sỉ"
+    usp: "hàng nhập, có COA"
+  - name: "Collagen peptide"
+    tag: ["collagen"]
+    price_note: "liên hệ báo giá sỉ"
+    usp: "gợi ý cho da khô / làm đẹp"
+
+ai:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  api_key: ""  # put secret in config.local.yaml
+
+email:
+  from: ""
+  to: ""
+  app_password: ""
+  digest_interval_minutes: 60
+
+dashboard:
+  host: 0.0.0.0
+  port: 5000
+  username: admin
+  password: change-me  # change before exposing the VPS
+
+poll_interval_seconds: 120
+scroll_count: 3
+min_score_to_notify: 3

@@ -6,6 +6,7 @@ import asyncio
 import logging
 import os
 import re
+from pathlib import Path
 from typing import Any
 
 import playwright_stealth
@@ -15,6 +16,28 @@ from playwright.async_api import BrowserContext, Page, Playwright, Response, asy
 logger = logging.getLogger(__name__)
 
 _POST_ID_RE = re.compile(r"/posts/(\d+)")
+_NUMERIC_ID_RE = re.compile(r"^\d{5,}$")
+
+
+def _load_config() -> dict[str, Any]:
+    """Load config.local.yaml when present, else config.yaml."""
+    root = Path(__file__).resolve().parent
+    path = root / "config.local.yaml"
+    if not path.exists():
+        path = root / "config.yaml"
+    with path.open(encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def _usable_post_id(raw_id: Any) -> str | None:
+    """Return a numeric post id suitable for /posts/{id} URLs, else None."""
+    # WHY: GraphQL trees mix story/comment tokens with real post ids; only
+    # digit ids form stable facebook.com/.../posts/{id} links operators can open.
+    text = str(raw_id or "").strip()
+    if _NUMERIC_ID_RE.match(text):
+        return text
+    match = _POST_ID_RE.search(text)
+    return match.group(1) if match else None
 
 
 async def start_browser(
@@ -45,7 +68,7 @@ def _walk_posts(node: Any, out: list[dict[str, Any]]) -> None:
     if isinstance(node, dict):
         message = node.get("message")
         text = message.get("text") if isinstance(message, dict) else None
-        post_id = node.get("id")
+        post_id = _usable_post_id(node.get("id"))
         if text and post_id:
             author_obj = node.get("author") or {}
             author = author_obj.get("name") if isinstance(author_obj, dict) else None
@@ -61,6 +84,21 @@ def _walk_posts(node: Any, out: list[dict[str, Any]]) -> None:
             _walk_posts(item, out)
 
 
+async def _article_body_text(article: Any) -> str:
+    """Pick the longest dir=auto span as likely body (skip author/time chips)."""
+    spans = article.locator('span[dir="auto"]')
+    count = await spans.count()
+    best = ""
+    for i in range(count):
+        try:
+            text = (await spans.nth(i).inner_text()).strip()
+        except Exception:
+            continue
+        if len(text) > len(best):
+            best = text
+    return best
+
+
 async def _dom_fallback_posts(page: Page, group_url: str) -> list[dict[str, Any]]:
     """Scrape visible article nodes when GraphQL yielded no posts."""
     posts: list[dict[str, Any]] = []
@@ -68,10 +106,7 @@ async def _dom_fallback_posts(page: Page, group_url: str) -> list[dict[str, Any]
     count = await articles.count()
     for i in range(count):
         article = articles.nth(i)
-        text = ""
-        span = article.locator('span[dir="auto"]').first
-        if await span.count() > 0:
-            text = (await span.inner_text()).strip()
+        text = await _article_body_text(article)
         post_id = None
         links = article.locator("a[href]")
         link_count = await links.count()
@@ -126,10 +161,9 @@ async def scan_group(page: Page, group_url: str, scrolls: int = 3) -> list[dict[
 
     deduped: dict[str, dict[str, Any]] = {}
     for post in collected:
-        post_id = str(post["id"])
-        if post_id in deduped:
+        post_id = _usable_post_id(post.get("id"))
+        if not post_id or post_id in deduped:
             continue
-        # Emit store-compatible keys (post_id, group_url); keep id/group aliases.
         enriched = {
             "post_id": post_id,
             "id": post_id,
@@ -148,7 +182,6 @@ async def scan_group(page: Page, group_url: str, scrolls: int = 3) -> list[dict[
             group_url,
         )
         posts = await _dom_fallback_posts(page, group_url)
-        # Dedupe fallback results by post_id as well.
         seen: set[str] = set()
         unique: list[dict[str, Any]] = []
         for post in posts:
@@ -163,8 +196,7 @@ async def scan_group(page: Page, group_url: str, scrolls: int = 3) -> list[dict[
 
 async def _main() -> None:
     """Load config and print the first three posts from the first group."""
-    with open("config.yaml", encoding="utf-8") as f:
-        config = yaml.safe_load(f) or {}
+    config = _load_config()
     groups = config.get("groups") or []
     if not groups:
         print("No group configured in config.yaml (groups is empty).")

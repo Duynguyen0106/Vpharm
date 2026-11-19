@@ -8,14 +8,17 @@ from typing import Any
 import httpx
 import yaml
 
-_CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
+_ROOT = Path(__file__).resolve().parent
 _API_URL = "https://api.anthropic.com/v1/messages"
 _FALLBACK = "[AI draft failed - reply manually]"
 
 
 def _load_config() -> dict[str, Any]:
-    """Load project config.yaml."""
-    with _CONFIG_PATH.open(encoding="utf-8") as f:
+    """Load config.local.yaml when present, else config.yaml."""
+    path = _ROOT / "config.local.yaml"
+    if not path.exists():
+        path = _ROOT / "config.yaml"
+    with path.open(encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 
@@ -47,14 +50,21 @@ def draft_reply(post_text: str, author: str) -> str:
         company = config.get("company") or {}
         name = company.get("name") or "công ty"
         tone = company.get("tone") or "chuyên nghiệp, thân thiện"
+        phone = (company.get("phone") or "").strip()
         ai = config.get("ai") or {}
         api_key = (ai.get("api_key") or "").strip()
         model = ai.get("model") or "claude-sonnet-4-6"
         catalog = config.get("catalog") or []
 
+        phone_line = (
+            f"Số điện thoại liên hệ công ty: {phone}. Có thể nhắc nhẹ trong CTA.\n"
+            if phone
+            else ""
+        )
         system = (
             f"Bạn là chuyên viên tư vấn của {name}, công ty bán SỈ thực phẩm chức năng.\n"
             f"Tone: {tone}.\n"
+            f"{phone_line}"
             "Đọc kỹ bài đăng và hiểu nhu cầu thật của khách.\n"
             "Đưa lời khuyên hữu ích TRƯỚC, bán hàng SAU.\n"
             "KHÔNG sáo rỗng, KHÔNG spam, tối đa 2 emoji. 3-5 câu.\n"

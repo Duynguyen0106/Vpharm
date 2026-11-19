@@ -8,9 +8,16 @@ from typing import Any
 
 import yaml
 
-_CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
+_ROOT = Path(__file__).resolve().parent
 
-with _CONFIG_PATH.open(encoding="utf-8") as _f:
+
+def _config_path() -> Path:
+    """Prefer config.local.yaml when present."""
+    local = _ROOT / "config.local.yaml"
+    return local if local.exists() else _ROOT / "config.yaml"
+
+
+with _config_path().open(encoding="utf-8") as _f:
     CONFIG: dict[str, Any] = yaml.safe_load(_f) or {}
 
 # Optional in-memory override (used by __main__ demos / tests).
@@ -31,12 +38,12 @@ def _contains(haystack: str, needle: str) -> bool:
 
 
 def _reload_config() -> dict[str, Any]:
-    """Reload config.yaml so intent/catalog edits apply without restart."""
+    """Reload config so intent/catalog edits apply without restart."""
     global CONFIG
     if _CONFIG_OVERRIDE is not None:
         CONFIG = _CONFIG_OVERRIDE
         return CONFIG
-    with _CONFIG_PATH.open(encoding="utf-8") as f:
+    with _config_path().open(encoding="utf-8") as f:
         CONFIG = yaml.safe_load(f) or {}
     return CONFIG
 
