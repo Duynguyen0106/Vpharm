@@ -1,0 +1,33 @@
+services:
+  monitor:
+    build: .
+    container_name: vpharm-monitor
+    restart: unless-stopped
+    environment:
+      LEADS_DB: /data/leads.db
+      FB_SESSION_DIR: /data/session
+      FB_HEADLESS: "0"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - vpharm-data:/data
+    command: ["/app/deploy/entrypoint-monitor.sh"]
+    shm_size: "1gb"
+
+  dashboard:
+    build: .
+    container_name: vpharm-dashboard
+    restart: unless-stopped
+    environment:
+      LEADS_DB: /data/leads.db
+      FB_SESSION_DIR: /data/session
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - vpharm-data:/data
+    ports:
+      - "5000:5000"
+    command: ["/app/deploy/entrypoint-dashboard.sh"]
+    depends_on:
+      - monitor
+
+volumes:
+  vpharm-data:

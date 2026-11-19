@@ -1,6 +1,7 @@
 # Runtime / local state
 session/
 leads.db
+data/
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -10,4 +11,7 @@ venv/
 # Secrets / local overrides (keep tracked config.yaml as the empty template)
 .env
 .env.*
+!.env.example
 config.local.yaml
+config.yaml.bak
+

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import re
 from typing import Any
 
@@ -18,15 +19,19 @@ _POST_ID_RE = re.compile(r"/posts/(\d+)")
 
 async def start_browser(
     pw: Playwright,
-    user_data_dir: str = "./session",
+    user_data_dir: str | None = None,
 ) -> tuple[BrowserContext, Page]:
     """Launch a persistent Chromium context and return (context, page)."""
     # Persistent profile keeps the Facebook login cookie across runs without
-    # re-auth; headless=False reduces empty GraphQL feeds on group pages.
+    # re-auth. Prefer headed (or Xvfb) over headless — FB often serves empty
+    # GraphQL feeds to headless Chromium.
+    session_dir = user_data_dir or os.environ.get("FB_SESSION_DIR", "./session")
+    headless = os.environ.get("FB_HEADLESS", "0").strip() in {"1", "true", "True"}
     context = await pw.chromium.launch_persistent_context(
-        user_data_dir,
-        headless=False,
+        session_dir,
+        headless=headless,
         viewport={"width": 1280, "height": 900},
+        args=["--disable-dev-shm-usage"],
     )
     page = context.pages[0] if context.pages else await context.new_page()
     await playwright_stealth.stealth_async(page)

@@ -33,3 +33,24 @@ Project constraints for Cursor live in [`.cursor/rules/facebook-group-lead-monit
 ## Status
 
 Core pipeline implemented: `store`, `fb`, `score`, `draft`, `notify_email`, `main`, and Vietnamese Flask dashboard (`dashboard/app.py`).
+
+## Run locally
+
+```bash
+pip install -r requirements.txt
+playwright install chromium
+# Fill config.yaml (groups, keywords, secrets)
+python test_e2e.py          # seed sample leads
+python dashboard/app.py     # http://localhost:5000
+python main.py              # monitor loop (needs Facebook login)
+```
+
+## Deploy on a VPS (recommended)
+
+Always-on host with Docker — see [`deploy/DEPLOY.md`](deploy/DEPLOY.md).
+
+```bash
+docker compose up -d --build
+```
+
+Cloudflare Pages/Workers cannot run Playwright; use a VPS (optionally put a Cloudflare Tunnel only in front of the dashboard).
