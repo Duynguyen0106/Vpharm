@@ -1,0 +1,29 @@
+company:
+  name: ""
+  phone: ""
+  tone: ""
+groups: []
+keywords: []
+intent_keywords:
+  buy: []
+  consult: []
+  urgency: []
+  supply: []
+catalog: []  # each item: {name, tag: [], price_note, usp}
+ai:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  api_key: ""
+email:
+  from: ""
+  to: ""
+  app_password: ""
+  digest_interval_minutes: 60
+dashboard:
+  host: 0.0.0.0
+  port: 5000
+  username: admin
+  password: change-me
+poll_interval_seconds: 120
+scroll_count: 3
+min_score_to_notify: 3
