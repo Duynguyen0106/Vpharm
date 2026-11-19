@@ -1,0 +1,17 @@
+---
+description: Core constraints for the Facebook Group Lead Monitor (Vpharm) — stack, file layout, monitor-only policy, and notification limits.
+alwaysApply: true
+---
+
+# Project: Facebook Group Lead Monitor
+
+- Python 3.11+, async where possible.
+- Stack: Playwright (`async_api`), SQLite, Flask, httpx, pyyaml.
+- NEVER use Selenium. NEVER use Facebook's official API (deprecated for groups).
+- MONITOR ONLY. No auto-comment, no auto-post, no auto-message. Ever.
+- All user-facing text in the dashboard is Vietnamese.
+- Files stay single-purpose: `fb.py`, `store.py`, `score.py`, `draft.py`, `notify_email.py`, `main.py`, `dashboard/app.py`.
+- Use `launch_persistent_context` for session persistence.
+- Type hints + short docstring on every function.
+- Comments explaining WHY when touching Playwright or Facebook GraphQL (fragile shapes).
+- Do not send Telegram or any messaging-app notifications — email + browser notifications only.
