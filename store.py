@@ -135,18 +135,22 @@ def list_leads(
     return [dict(row) for row in rows]
 
 
-def leads_since(ts: int, limit: int = 20) -> list[dict[str, Any]]:
-    """Return recent high-score lead summaries with seen_at greater than ts."""
+def leads_since(
+    ts: int,
+    limit: int = 20,
+    min_score: int = 0,
+) -> list[dict[str, Any]]:
+    """Return recent lead summaries with seen_at > ts and score >= min_score."""
     with _connect() as conn:
         rows = conn.execute(
             """
             SELECT post_id, author, score, text, url, seen_at
             FROM leads
-            WHERE seen_at > ?
+            WHERE seen_at > ? AND score >= ?
             ORDER BY score DESC, seen_at DESC
             LIMIT ?
             """,
-            (ts, limit),
+            (ts, min_score, limit),
         ).fetchall()
     return [dict(row) for row in rows]
 

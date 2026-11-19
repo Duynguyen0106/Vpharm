@@ -13,6 +13,9 @@ _CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
 with _CONFIG_PATH.open(encoding="utf-8") as _f:
     CONFIG: dict[str, Any] = yaml.safe_load(_f) or {}
 
+# Optional in-memory override (used by __main__ demos / tests).
+_CONFIG_OVERRIDE: dict[str, Any] | None = None
+
 # Competitor-style CTAs at end of post ("ib giá ạ", "inbox sỉ nhé").
 _COMPETITOR_RE = re.compile(
     r"(ib|inbox)\s*(giá|sỉ)?\s*(ạ|nhé)?\s*$",
@@ -27,8 +30,20 @@ def _contains(haystack: str, needle: str) -> bool:
     return needle.casefold() in haystack.casefold()
 
 
+def _reload_config() -> dict[str, Any]:
+    """Reload config.yaml so intent/catalog edits apply without restart."""
+    global CONFIG
+    if _CONFIG_OVERRIDE is not None:
+        CONFIG = _CONFIG_OVERRIDE
+        return CONFIG
+    with _CONFIG_PATH.open(encoding="utf-8") as f:
+        CONFIG = yaml.safe_load(f) or {}
+    return CONFIG
+
+
 def score(post_text: str, matched_keywords: list[str]) -> tuple[int, list[str]]:
     """Score a post from keyword hits, intent, catalog, and spam signals."""
+    cfg = _reload_config()
     text = post_text or ""
     reasons: list[str] = []
     total = 0
@@ -38,7 +53,7 @@ def score(post_text: str, matched_keywords: list[str]) -> tuple[int, list[str]]:
         total += n_kw
         reasons.append(f"+{n_kw} keyword match")
 
-    intent = CONFIG.get("intent_keywords") or {}
+    intent = cfg.get("intent_keywords") or {}
     for kind, points, label in (
         ("buy", 3, "buy"),
         ("consult", 2, "consult"),
@@ -51,7 +66,7 @@ def score(post_text: str, matched_keywords: list[str]) -> tuple[int, list[str]]:
                 reasons.append(f"+{points} {label}-intent ({kw})")
                 break
 
-    for item in CONFIG.get("catalog") or []:
+    for item in cfg.get("catalog") or []:
         name = (item or {}).get("name") or "unknown"
         for tag in (item or {}).get("tag") or []:
             if _contains(text, str(tag)):
@@ -78,20 +93,23 @@ def score(post_text: str, matched_keywords: list[str]) -> tuple[int, list[str]]:
 if __name__ == "__main__":
     # Demo intents/catalog so sample posts exercise the full rubric
     # even when config.yaml lists are still empty.
-    CONFIG["intent_keywords"] = {
-        "buy": ["mua", "cần mua", "giá bao nhiêu"],
-        "consult": ["tư vấn", "hỏi"],
-        "urgency": ["gấp", "hôm nay", "liên hệ ngay"],
-        "supply": ["sỉ", "buôn", "nhập hàng", "wholesale"],
+    _CONFIG_OVERRIDE = {  # noqa: F480 — module-scope demo override
+        **CONFIG,
+        "intent_keywords": {
+            "buy": ["mua", "cần mua", "giá bao nhiêu"],
+            "consult": ["tư vấn", "hỏi"],
+            "urgency": ["gấp", "hôm nay", "liên hệ ngay"],
+            "supply": ["sỉ", "buôn", "nhập hàng", "wholesale"],
+        },
+        "catalog": [
+            {
+                "name": "Vitamin C 1000mg",
+                "tag": ["vitamin c", "vit C"],
+                "price_note": "",
+                "usp": "",
+            }
+        ],
     }
-    CONFIG["catalog"] = [
-        {
-            "name": "Vitamin C 1000mg",
-            "tag": ["vitamin c", "vit C"],
-            "price_note": "",
-            "usp": "",
-        }
-    ]
 
     samples: list[tuple[str, list[str]]] = [
         (

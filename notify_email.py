@@ -34,10 +34,13 @@ def _lead_body(lead: dict[str, Any]) -> str:
     )
 
 
-def send_digest(leads: list[dict[str, Any]]) -> None:
-    """Email a score-sorted digest of up to 10 leads; never raise."""
+def send_digest(leads: list[dict[str, Any]]) -> bool:
+    """Email a score-sorted digest of up to 10 leads; never raise.
+
+    Returns True on success (or empty input), False if SMTP/send failed.
+    """
     if not leads:
-        return
+        return True
     try:
         config = _load_config()
         company = (config.get("company") or {}).get("name") or "Vpharm"
@@ -60,9 +63,11 @@ def send_digest(leads: list[dict[str, Any]]) -> None:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
             smtp.login(sender, app_password)
             smtp.sendmail(sender, [recipient], msg.as_string())
+        return True
     except Exception as exc:
         # Scraper/orchestrator must keep running if email fails.
         print(f"notify_email error: {exc}")
+        return False
 
 
 if __name__ == "__main__":

@@ -127,8 +127,13 @@ def update(post_id: str) -> Response:
 @app.get("/api/leads/since/<int:ts>")
 @requires_auth
 def api_leads_since(ts: int) -> dict[str, Any]:
-    """JSON feed of leads newer than ts for browser notifications."""
-    return {"leads": store.leads_since(ts), "now": int(time.time())}
+    """JSON feed of notify-worthy leads newer than ts for browser alerts."""
+    cfg = _load_config()
+    min_score = int(cfg.get("min_score_to_notify") or 3)
+    return {
+        "leads": store.leads_since(ts, min_score=min_score),
+        "now": int(time.time()),
+    }
 
 
 @app.get("/export.csv")

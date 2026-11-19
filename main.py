@@ -116,40 +116,45 @@ async def run() -> None:
                                 for kw in keywords
                                 if kw.lower() in text.lower()
                             ]
+                            # Skip non-matches entirely so score-0 noise never
+                            # lands in SQLite or the live-notification feed.
                             if not hits:
-                                store.insert(post, [], 0, [], "")
                                 continue
                             score_val, reasons = score.score(text, hits)
-                            draft_text = (
-                                draft.draft_reply(text, post.get("author") or "Unknown")
-                                if score_val >= min_score
-                                else ""
+                            if score_val < min_score:
+                                continue
+                            draft_text = draft.draft_reply(
+                                text, post.get("author") or "Unknown"
                             )
                             store.insert(post, hits, score_val, reasons, draft_text)
-                            if score_val >= min_score:
-                                pending.append(
-                                    {
-                                        "score": score_val,
-                                        "author": post.get("author") or "Unknown",
-                                        "text": text,
-                                        "draft": draft_text,
-                                        "url": post.get("url") or "",
-                                    }
-                                )
-                                logger.info(
-                                    "Lead %s score=%s author=%s",
-                                    post_id,
-                                    score_val,
-                                    post.get("author"),
-                                )
+                            pending.append(
+                                {
+                                    "score": score_val,
+                                    "author": post.get("author") or "Unknown",
+                                    "text": text,
+                                    "draft": draft_text,
+                                    "url": post.get("url") or "",
+                                }
+                            )
+                            logger.info(
+                                "Lead %s score=%s author=%s",
+                                post_id,
+                                score_val,
+                                post.get("author"),
+                            )
                     except Exception:
                         logger.exception("Error scanning group %s", group_url)
                         continue
 
                 if time.time() - last_flush > digest_seconds and pending:
-                    notify_email.send_digest(pending)
-                    pending.clear()
-                    last_flush = time.time()
+                    if notify_email.send_digest(pending):
+                        pending.clear()
+                        last_flush = time.time()
+                    else:
+                        logger.warning(
+                            "Digest send failed; keeping %s pending leads",
+                            len(pending),
+                        )
 
                 await asyncio.sleep(poll_seconds)
         finally:
