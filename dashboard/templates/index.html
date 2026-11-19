@@ -3,247 +3,177 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Vpharm — Bảng lead</title>
+  <title>Lead Cockpit</title>
   <style>
-    :root {
-      --bg: #f3f6f4;
-      --ink: #14201a;
-      --muted: #5b6b62;
-      --line: #d5ddd7;
-      --accent: #0f6b4c;
-      --accent-soft: #e4f3ec;
-      --warn: #8a4b12;
-      --card: #ffffff;
-      --font: "Be Vietnam Pro", "Segoe UI", sans-serif;
+    body{font-family:-apple-system,sans-serif;margin:0;background:#f5f6f8}
+    header{background:#111;color:#fff;padding:12px 20px}
+    header a{color:#9fd;text-decoration:none;margin-left:12px}
+    header .brand{font-weight:700;font-size:18px}
+    .wrap{max-width:1200px;margin:20px auto;padding:0 16px}
+    .card{background:#fff;border-radius:8px;padding:12px 16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+    .stats{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+    .stats .card{min-width:140px;flex:1}
+    .stats .card .n{font-size:22px;font-weight:700}
+    .stats .card .lbl{color:#666;font-size:13px;margin-top:2px}
+    .filters{margin-bottom:16px}
+    .filters a{
+      display:inline-block;padding:6px 12px;margin-right:6px;margin-bottom:6px;
+      border-radius:16px;background:#e5e7eb;color:#111;text-decoration:none;font-size:13px
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: var(--font);
-      color: var(--ink);
-      background:
-        radial-gradient(1200px 500px at 10% -10%, #dceee4 0%, transparent 55%),
-        linear-gradient(180deg, #eef3f0, var(--bg));
-      min-height: 100vh;
+    .filters a.on{background:#111;color:#fff}
+    .row{background:#fff;border-radius:8px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);position:relative}
+    .score-badge{
+      position:absolute;top:12px;right:12px;background:#111;color:#fff;
+      border-radius:12px;padding:4px 10px;font-weight:700;font-size:13px
     }
-    header {
-      padding: 1.25rem 1.5rem 0.5rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem 1.25rem;
-      align-items: baseline;
-      justify-content: space-between;
-    }
-    h1 {
-      margin: 0;
-      font-size: 1.35rem;
-      letter-spacing: -0.02em;
-    }
-    h1 span { color: var(--accent); }
-    .meta { color: var(--muted); font-size: 0.92rem; }
-    main { padding: 0 1.5rem 2.5rem; max-width: 1100px; margin: 0 auto; }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 0.75rem;
-      margin: 1rem 0 1.25rem;
-    }
-    .stat {
-      background: var(--card);
-      border: 1px solid var(--line);
-      padding: 0.85rem 1rem;
-    }
-    .stat strong { display: block; font-size: 1.25rem; }
-    .stat span { color: var(--muted); font-size: 0.85rem; }
-    form.filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      align-items: end;
-      margin-bottom: 1rem;
-    }
-    label { display: grid; gap: 0.25rem; font-size: 0.85rem; color: var(--muted); }
-    input, select, textarea, button {
-      font: inherit;
-      padding: 0.45rem 0.6rem;
-      border: 1px solid var(--line);
-      background: #fff;
-      color: var(--ink);
-    }
-    button, .btn {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
-    }
-    .btn.secondary { background: #fff; color: var(--accent); }
-    .lead {
-      background: var(--card);
-      border: 1px solid var(--line);
-      padding: 1rem;
-      margin-bottom: 0.85rem;
-    }
-    .lead-top {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem 1rem;
-      justify-content: space-between;
-      margin-bottom: 0.5rem;
-    }
-    .score {
-      background: var(--accent-soft);
-      color: var(--accent);
-      padding: 0.15rem 0.45rem;
-      font-weight: 700;
-      font-size: 0.9rem;
-    }
-    .text { white-space: pre-wrap; line-height: 1.45; margin: 0.5rem 0; }
-    .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.35rem 0; }
-    .chip {
-      background: #eef1ef;
-      color: var(--muted);
-      font-size: 0.78rem;
-      padding: 0.15rem 0.4rem;
-    }
-    .draft {
-      background: #faf7f1;
-      border-left: 3px solid var(--warn);
-      padding: 0.6rem 0.75rem;
-      margin: 0.6rem 0;
-      white-space: pre-wrap;
-      font-size: 0.95rem;
-    }
-    .update {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 0.5rem;
-      align-items: end;
-      margin-top: 0.75rem;
-    }
-    .empty { color: var(--muted); padding: 2rem 0; }
-    a { color: var(--accent); }
+    .meta{color:#666;font-size:13px;margin:4px 0 8px;padding-right:70px}
+    .author{font-weight:600;color:#111;font-size:15px}
+    .post-text{white-space:pre-wrap;margin:8px 0;line-height:1.45}
+    .draft{background:#f0f8ff;border-left:3px solid #3b82f6;padding:10px;margin:10px 0;border-radius:4px;white-space:pre-wrap}
+    .tag{display:inline-block;background:#eef;color:#334;border-radius:10px;padding:2px 8px;font-size:11px;margin-right:4px;margin-bottom:4px}
+    .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+    .actions textarea{width:100%;min-height:56px;padding:8px;border:1px solid #ddd;border-radius:6px;font:inherit}
+    .actions input[type=number]{width:110px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font:inherit}
+    button{border:0;border-radius:6px;padding:8px 12px;cursor:pointer;font:inherit}
+    button.ok{background:#10b981;color:#fff}
+    button.conv{background:#f59e0b;color:#fff}
+    button.no{background:#ef4444;color:#fff}
+    .open-link{color:#2563eb;text-decoration:none;font-size:14px}
+    .empty{color:#666;padding:24px 0}
   </style>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <header>
-    <div>
-      <h1><span>Vpharm</span> — Bảng theo dõi lead</h1>
-      <div class="meta">Chỉ giám sát · không tự bình luận / đăng / nhắn tin</div>
-    </div>
-    <div>
-      <a class="btn secondary" href="{{ url_for('export_csv') }}">Xuất CSV</a>
-    </div>
+    <span class="brand">{{ cfg.company.name or 'Vpharm' }}</span>
+    <a href="{{ url_for('export_csv') }}">Xuất CSV</a>
   </header>
-  <main>
-    <section class="stats" aria-label="Thống kê">
+
+  <div class="wrap">
+    <div class="stats">
       {% for row in stats.by_status %}
-      <div class="stat">
-        <strong>{{ row.n }}</strong>
-        <span>Trạng thái: {{ row.status }} · DT {{ row.rev }}</span>
+      <div class="card">
+        <div class="n">{{ row.n }}</div>
+        <div class="lbl">{{ row.status }} · {{ "{:,}".format(row.rev or 0) }}₫</div>
       </div>
       {% else %}
-      <div class="stat"><strong>0</strong><span>Chưa có lead</span></div>
+      <div class="card">
+        <div class="n">0</div>
+        <div class="lbl">Chưa có lead</div>
+      </div>
       {% endfor %}
-    </section>
+    </div>
 
-    <form class="filters" method="get" action="{{ url_for('index') }}">
-      <label>Trạng thái
-        <select name="status">
-          <option value="" {% if not current_status %}selected{% endif %}>Tất cả</option>
-          {% for s in ['new','contacted','won','lost','spam'] %}
-          <option value="{{ s }}" {% if current_status == s %}selected{% endif %}>{{ s }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label>Điểm tối thiểu
-        <input type="number" name="min_score" value="{{ request.args.get('min_score', 0) }}" min="0">
-      </label>
-      <button type="submit">Lọc</button>
-    </form>
+    <div class="filters">
+      {% set filters = [('', 'Tất cả'), ('new', 'new'), ('approved', 'approved'), ('converted', 'converted'), ('lost', 'lost')] %}
+      {% for value, label in filters %}
+      <a
+        href="{{ url_for('index', status=value or None, min_score=request.args.get('min_score', 0)) }}"
+        class="{% if current_status == value %}on{% endif %}"
+      >{{ label }}</a>
+      {% endfor %}
+    </div>
 
     {% if leads %}
       {% for lead in leads %}
-      <article class="lead">
-        <div class="lead-top">
-          <div>
-            <span class="score">{{ lead.score or 0 }} điểm</span>
-            <strong>{{ lead.author or 'Ẩn danh' }}</strong>
-            <span class="meta">· {{ lead.status }}</span>
-          </div>
-          {% if lead.url %}
-          <a href="{{ lead.url }}" target="_blank" rel="noopener">Mở bài viết</a>
+      <div class="row">
+        <div class="score-badge">{{ lead.score or 0 }} pts</div>
+        <div class="author">{{ lead.author or 'Ẩn danh' }}</div>
+        <div class="meta">
+          Nhóm: {{ (lead.group_url or '').rstrip('/').split('/')[-1] or '—' }}
+          ·
+          {% if lead.seen_at %}
+            {{ lead.seen_at }}
+          {% else %}
+            —
           {% endif %}
         </div>
-        <p class="text">{{ lead.text }}</p>
-        {% if lead.matched_kw %}
-        <div class="chips">
-          {% for kw in lead.matched_kw %}
-          <span class="chip">{{ kw }}</span>
+        <div>
+          {% for reason in lead.score_reasons or [] %}
+          <span class="tag">{{ reason }}</span>
           {% endfor %}
         </div>
-        {% endif %}
-        {% if lead.score_reasons %}
-        <div class="chips">
-          {% for reason in lead.score_reasons %}
-          <span class="chip">{{ reason }}</span>
-          {% endfor %}
-        </div>
-        {% endif %}
+        <div class="post-text">{{ lead.text }}</div>
         {% if lead.draft %}
-        <div class="draft"><strong>Nháp trả lời</strong><br>{{ lead.draft }}</div>
+        <div class="draft">💡 Draft:
+{{ lead.draft }}</div>
         {% endif %}
-        <form class="update" method="post" action="{{ url_for('update', post_id=lead.post_id) }}">
-          <label>Trạng thái
-            <select name="status">
-              {% for s in ['new','contacted','won','lost','spam'] %}
-              <option value="{{ s }}" {% if lead.status == s %}selected{% endif %}>{{ s }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label>Doanh thu
-            <input type="number" name="revenue" value="{{ lead.revenue or 0 }}">
-          </label>
-          <label>Ghi chú
-            <input type="text" name="notes" value="{{ lead.notes or '' }}">
-          </label>
-          <button type="submit">Cập nhật</button>
+        <form method="post" action="{{ url_for('update', post_id=lead.post_id) }}">
+          <div class="actions">
+            <textarea name="notes" placeholder="Ghi chú...">{{ lead.notes or '' }}</textarea>
+            <button type="submit" name="status" value="approved" class="ok">Đã trả lời</button>
+            <button type="submit" name="status" value="converted" class="conv">Chốt đơn</button>
+            <button type="submit" name="status" value="lost" class="no">Bỏ qua</button>
+            <input type="number" name="revenue" value="{{ lead.revenue or 0 }}" min="0" placeholder="Doanh thu">
+            {% if lead.url %}
+            <a class="open-link" href="{{ lead.url }}" target="_blank" rel="noopener">Mở bài</a>
+            {% endif %}
+          </div>
         </form>
-      </article>
+      </div>
       {% endfor %}
     {% else %}
       <p class="empty">Chưa có lead phù hợp bộ lọc.</p>
     {% endif %}
-  </main>
-  <script>
-    (function () {
-      let since = {{ now }};
-      async function poll() {
-        try {
-          const res = await fetch('/api/leads/since/' + since, { credentials: 'same-origin' });
-          if (!res.ok) return;
-          const data = await res.json();
-          since = data.now || since;
-          const leads = data.leads || [];
-          if (!leads.length) return;
-          if (Notification.permission === 'granted') {
-            leads.slice(0, 3).forEach((lead) => {
-              new Notification('Lead mới · ' + (lead.score || 0) + ' điểm', {
-                body: ((lead.author || '') + ': ' + (lead.text || '')).slice(0, 140),
-              });
-            });
-          }
-        } catch (e) {}
+  </div>
+
+<script>
+const LAST_TS = {{ now }};
+let cursor = LAST_TS, newLeads = 0;
+
+if ("Notification" in window && Notification.permission === "default") {
+  Notification.requestPermission();
+}
+
+function beep() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.frequency.value = 880; o.type = "sine";
+  g.gain.setValueAtTime(0.001, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+  o.start(); o.stop(ctx.currentTime + 0.45);
+}
+
+function showBanner(lead) {
+  let b = document.getElementById("live-banner");
+  if (!b) {
+    b = document.createElement("div");
+    b.id = "live-banner";
+    b.style.cssText = "position:fixed;top:10px;right:10px;background:#111;color:#fff;padding:12px 16px;border-radius:8px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.3)";
+    document.body.appendChild(b);
+  }
+  b.innerHTML = `🔔 Lead ${lead.score}pts · ${lead.author}
+    <a href="${lead.url}" target="_blank" style="color:#9fd;margin-left:8px">Mở bài</a>
+    <span onclick="location.reload()" style="margin-left:12px;color:#9fd;text-decoration:underline;cursor:pointer">Refresh</span>`;
+}
+
+function notify(lead) {
+  if (Notification.permission === "granted") {
+    const n = new Notification(`🔥 Lead ${lead.score}pts · ${lead.author}`, {
+      body: lead.text.slice(0, 120), tag: lead.post_id
+    });
+    n.onclick = () => { window.focus(); location.reload(); };
+  }
+  showBanner(lead);
+  document.title = `(${newLeads}) Lead Cockpit`;
+}
+
+async function poll() {
+  try {
+    const r = await fetch(`/api/leads/since/${cursor}`);
+    if (r.ok) {
+      const data = await r.json();
+      if (data.leads.length) {
+        newLeads += data.leads.length;
+        beep();
+        notify(data.leads[0]);        // top-scored
+        cursor = data.now;
       }
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-      setInterval(poll, 30000);
-    })();
-  </script>
+    }
+  } catch (e) {}
+}
+setInterval(poll, 15000);
+</script>
 </body>
 </html>
