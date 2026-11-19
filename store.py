@@ -63,6 +63,8 @@ def insert(
 ) -> None:
     """Insert a scored lead; JSON fields use ensure_ascii=False."""
     now = int(time.time())
+    post_id = post.get("post_id") or post.get("id")
+    group_url = post.get("group_url") or post.get("group")
     with _connect() as conn:
         conn.execute(
             """
@@ -73,8 +75,8 @@ def insert(
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', 0, NULL, ?, ?)
             """,
             (
-                post.get("post_id"),
-                post.get("group_url"),
+                post_id,
+                group_url,
                 post.get("author"),
                 post.get("text"),
                 post.get("url"),
@@ -91,19 +93,24 @@ def insert(
 def update_status(
     post_id: str,
     status: str,
-    revenue: int = 0,
+    revenue: int | None = None,
     notes: str | None = None,
 ) -> None:
-    """Update status, revenue, and optional notes for a lead."""
+    """Update status; only touch revenue/notes when explicitly provided."""
     now = int(time.time())
+    sets = ["status = ?", "updated_at = ?"]
+    params: list[Any] = [status, now]
+    if revenue is not None:
+        sets.append("revenue = ?")
+        params.append(revenue)
+    if notes is not None:
+        sets.append("notes = ?")
+        params.append(notes)
+    params.append(post_id)
     with _connect() as conn:
         conn.execute(
-            """
-            UPDATE leads
-            SET status = ?, revenue = ?, notes = ?, updated_at = ?
-            WHERE post_id = ?
-            """,
-            (status, revenue, notes, now, post_id),
+            f"UPDATE leads SET {', '.join(sets)} WHERE post_id = ?",
+            params,
         )
 
 

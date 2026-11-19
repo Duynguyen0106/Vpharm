@@ -79,10 +79,12 @@ async def _dom_fallback_posts(page: Page, group_url: str) -> list[dict[str, Any]
         if text and post_id:
             posts.append(
                 {
+                    "post_id": post_id,
                     "id": post_id,
                     "text": text,
                     "author": "Unknown",
                     "url": f"{group_url.rstrip('/')}/posts/{post_id}",
+                    "group_url": group_url,
                     "group": group_url,
                 }
             )
@@ -122,11 +124,14 @@ async def scan_group(page: Page, group_url: str, scrolls: int = 3) -> list[dict[
         post_id = str(post["id"])
         if post_id in deduped:
             continue
+        # Emit store-compatible keys (post_id, group_url); keep id/group aliases.
         enriched = {
+            "post_id": post_id,
             "id": post_id,
             "text": post["text"],
             "author": post.get("author", "Unknown"),
             "url": f"{group_url.rstrip('/')}/posts/{post_id}",
+            "group_url": group_url,
             "group": group_url,
         }
         deduped[post_id] = enriched
@@ -138,13 +143,14 @@ async def scan_group(page: Page, group_url: str, scrolls: int = 3) -> list[dict[
             group_url,
         )
         posts = await _dom_fallback_posts(page, group_url)
-        # Dedupe fallback results by id as well.
+        # Dedupe fallback results by post_id as well.
         seen: set[str] = set()
         unique: list[dict[str, Any]] = []
         for post in posts:
-            if post["id"] in seen:
+            pid = post["post_id"]
+            if pid in seen:
                 continue
-            seen.add(post["id"])
+            seen.add(pid)
             unique.append(post)
         posts = unique
     return posts

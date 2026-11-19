@@ -32,4 +32,4 @@ Project constraints for Cursor live in [`.cursor/rules/facebook-group-lead-monit
 
 ## Status
 
-Documentation and Cursor rules only — application code not implemented yet.
+Scaffold + working `store.py` and monitor-only `fb.py`. Scoring, drafts, email, orchestrator, and dashboard are not implemented yet.
